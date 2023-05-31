@@ -1,8 +1,11 @@
 import React from 'react';
 import {
+  NativeModules,
+  Platform,
   SafeAreaView,
   ScrollView,
   StatusBar,
+  StyleSheet,
   TouchableOpacity,
   useColorScheme,
   View,
@@ -22,6 +25,12 @@ function App(): JSX.Element {
     backgroundColor: isDarkMode ? 'black' : 'white',
   };
 
+  const openNotifications = () => {
+    if (Platform.OS === 'android') {
+      NativeModules.SendbirdNotifications.open();
+    }
+  };
+
   return (
     <SafeAreaView style={backgroundStyle}>
       <StatusBar
@@ -36,7 +45,7 @@ function App(): JSX.Element {
             backgroundColor: isDarkMode ? Colors.black : Colors.white,
           }}>
           <View style={styles.container}>
-            <TouchableOpacity>
+            <TouchableOpacity onPress={openNotifications}>
               <IcNotifications />
             </TouchableOpacity>
           </View>
@@ -48,11 +57,11 @@ function App(): JSX.Element {
 
 export default App;
 
-const styles = {
+const styles = StyleSheet.create({
   container: {
     padding: 16,
     display: 'flex',
     flexDirection: 'row',
     justifyContent: 'flex-end',
   },
-};
+});

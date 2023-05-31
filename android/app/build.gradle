@@ -130,6 +130,13 @@ android {
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
         }
     }
+    buildFeatures {
+        viewBinding true
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8    // Make sure you have JavaVersion 1.8.
+        targetCompatibility JavaVersion.VERSION_1_8    // Make sure you have JavaVersion 1.8.
+    }
 
     // applicationVariants are e.g. debug, release
     applicationVariants.all { variant ->
@@ -153,6 +160,7 @@ dependencies {
     implementation("com.facebook.react:react-android")
 
     implementation("androidx.swiperefreshlayout:swiperefreshlayout:1.0.0")
+    implementation "com.sendbird.sdk:uikit:3.+"
 
     debugImplementation("com.facebook.flipper:flipper:${FLIPPER_VERSION}")
     debugImplementation("com.facebook.flipper:flipper-network-plugin:${FLIPPER_VERSION}") {
