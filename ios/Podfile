@@ -23,6 +23,7 @@ end
 
 target 'RNSBNotifications' do
   config = use_native_modules!
+  pod 'SendBirdUIKit'
 
   # Flags change depending on the env values.
   flags = get_default_flags()

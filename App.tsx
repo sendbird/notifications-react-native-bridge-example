@@ -1,7 +1,6 @@
 import React from 'react';
 import {
   NativeModules,
-  Platform,
   SafeAreaView,
   ScrollView,
   StatusBar,
@@ -26,13 +25,11 @@ function App(): JSX.Element {
   };
 
   const openNotifications = () => {
-    if (Platform.OS === 'android') {
-      NativeModules.SendbirdNotifications.open();
-    }
+    NativeModules.SendbirdNotifications.open();
   };
 
   return (
-    <SafeAreaView style={backgroundStyle}>
+    <SafeAreaView style={[backgroundStyle, styles.wrapper]}>
       <StatusBar
         barStyle={isDarkMode ? 'light-content' : 'dark-content'}
         backgroundColor={backgroundStyle.backgroundColor}
@@ -58,6 +55,9 @@ function App(): JSX.Element {
 export default App;
 
 const styles = StyleSheet.create({
+  wrapper: {
+    flex: 1,
+  },
   container: {
     padding: 16,
     display: 'flex',
