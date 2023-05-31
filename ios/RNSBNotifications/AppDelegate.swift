@@ -22,8 +22,6 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
       // Hide the loading indicator.
     }
 
-    SBUGlobals.currentUser = SBUUser(userId: "test", nickname: "Test", profileURL: "")
-
     let jsCodeLocation: URL
 
     jsCodeLocation = RCTBundleURLProvider.sharedSettings().jsBundleURL(forBundleRoot: "index")

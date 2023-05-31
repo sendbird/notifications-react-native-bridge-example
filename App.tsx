@@ -25,7 +25,10 @@ function App(): JSX.Element {
   };
 
   const openNotifications = () => {
-    NativeModules.SendbirdNotifications.open();
+    NativeModules.SendbirdNotifications.open(
+      'test',
+      isDarkMode ? 'dark' : 'light',
+    );
   };
 
   return (
