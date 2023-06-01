@@ -11,6 +11,7 @@ import com.facebook.react.bridge.ReactApplicationContext;
 import com.facebook.react.bridge.ReactContext;
 import com.facebook.react.bridge.ReactContextBaseJavaModule;
 import com.facebook.react.bridge.ReactMethod;
+import com.facebook.react.bridge.Callback;
 import java.util.Map;
 import java.util.HashMap;
 
@@ -35,7 +36,7 @@ public class SendbirdNotifications extends ReactContextBaseJavaModule {
     }
 
     @ReactMethod
-    public void open(String userId, String theme) {
+    public void open(String userId, String theme, Boolean disconnectFirst, Callback success, Callback error) {
         try {
             SendbirdUIKit.setDefaultThemeMode(
                     theme.equals("dark") ? SendbirdUIKit.ThemeMode.Dark : SendbirdUIKit.ThemeMode.Light);
@@ -111,8 +112,10 @@ public class SendbirdNotifications extends ReactContextBaseJavaModule {
 
             Intent intent = FeedNotificationChannelActivity.newIntent(reactContext, "notification_143867_feed");
             currentActivity.startActivity(intent);
+            success.invoke(userId);
         } catch (Exception e) {
             System.out.println(e.getMessage());
+            error.invoke(e.getMessage());
         }
     }
 }

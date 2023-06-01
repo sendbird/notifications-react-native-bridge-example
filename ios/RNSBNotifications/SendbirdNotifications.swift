@@ -6,21 +6,42 @@ class SendbirdNotifications: NSObject {
     return true
   }
 
-  @objc(open:theme:)
-  func open(userId: String, theme: String) -> Void {
+  @objc(open:theme:disconnectFirst:successCallback:errorCallback:)
+  func open(userId: String, theme: String, disconnectFirst: Bool, successCallback: @escaping RCTResponseSenderBlock, errorCallback: @escaping RCTResponseErrorBlock) -> Void {
     DispatchQueue.main.async {
-      SBUGlobals.currentUser = SBUUser(userId: userId)
       SBUTheme.set(theme: theme == "dark" ? .dark : .light)
 
-      let channelVC =
-        SBUViewControllerSet.FeedNotificationChannelViewController.init(
-        channelURL: "notification_143867_feed"
-      )
+      func connect() {
+        SBUGlobals.currentUser = SBUUser(userId: userId)
+        SendbirdUI.connect { user, error in
+          if let error = error {
+            errorCallback(error)
+            return
+          }
 
-      guard let navigationController = UIApplication.shared.keyWindow?.rootViewController as? UINavigationController else {
-        return
+          if let user = user {
+            let channelVC =
+              SBUViewControllerSet.FeedNotificationChannelViewController.init(
+                channelURL: "notification_143867_feed"
+              )
+
+            guard let navigationController = UIApplication.shared.keyWindow?.rootViewController as? UINavigationController else {
+              errorCallback(NSError(domain: "org.reactjs.native.example.RNSBNotifications", code: 0, userInfo: [NSLocalizedDescriptionKey: "navigationController is null"]))
+              return
+            }
+            navigationController.pushViewController(channelVC, animated: true)
+            successCallback([user.userId])
+          }
+        }
       }
-      navigationController.pushViewController(channelVC, animated: true)
+
+      if (disconnectFirst) {
+        SendbirdUI.disconnect {
+          connect()
+        }
+      } else {
+        connect()
+      }
     }
   }
 }
