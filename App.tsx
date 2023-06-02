@@ -13,6 +13,8 @@ import {
   useColorScheme,
   View,
 } from 'react-native';
+import {useAsyncStorage} from '@react-native-async-storage/async-storage';
+
 import SendbirdChat from '@sendbird/chat';
 import PushNotificationIOS from '@react-native-community/push-notification-ios';
 import type {PushNotification} from '@react-native-community/push-notification-ios';
@@ -84,11 +86,40 @@ async function registerPushToken() {
   }
 }
 
-function App(): JSX.Element {
+function App() {
+  const [isLoading, setIsLoading] = useState(true);
   const [currentUserId, setCurrentUserId] = useState('');
   const [userId, setUserId] = useState('');
   const [nativeSendbirdUserId, setNativeSendbirdUserId] = useState('');
+  const {getItem, setItem} = useAsyncStorage('userId');
   const isDarkMode = useColorScheme() === 'dark';
+
+  const authenticate = useCallback(async (id: string) => {
+    await sendbird.connect(id);
+    await notifee.requestPermission();
+    await registerPushToken();
+  }, []);
+
+  const readUserIdFromStorage = useEvent(async () => {
+    const storedUserId = await getItem();
+    if (storedUserId) {
+      setCurrentUserId(storedUserId);
+      await authenticate(storedUserId);
+    }
+    setIsLoading(false);
+  });
+
+  const writeUserIdToStorage = useCallback(
+    async (value: string) => {
+      setCurrentUserId(value);
+      await setItem(value);
+    },
+    [setItem],
+  );
+
+  useEffect(() => {
+    readUserIdFromStorage();
+  }, [readUserIdFromStorage]);
 
   const backgroundStyle = {
     backgroundColor: isDarkMode ? 'black' : 'white',
@@ -210,10 +241,8 @@ function App(): JSX.Element {
     }
 
     try {
-      await sendbird.connect(trimmedUserId);
-      setCurrentUserId(trimmedUserId);
-      await notifee.requestPermission();
-      registerPushToken();
+      await authenticate(trimmedUserId);
+      await writeUserIdToStorage(trimmedUserId);
     } catch (error) {
       console.error(error);
     }
@@ -237,6 +266,10 @@ function App(): JSX.Element {
       console.error(error);
     }
   };
+
+  if (isLoading) {
+    return null;
+  }
 
   return (
     <SafeAreaView style={[backgroundStyle, styles.wrapper]}>
