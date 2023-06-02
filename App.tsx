@@ -16,6 +16,10 @@ import {
 import SendbirdChat from '@sendbird/chat';
 import PushNotificationIOS from '@react-native-community/push-notification-ios';
 import type {PushNotification} from '@react-native-community/push-notification-ios';
+import messaging, {
+  FirebaseMessagingTypes,
+} from '@react-native-firebase/messaging';
+import notifee, {EventType, Notification} from '@notifee/react-native';
 import {useAppState} from '@react-native-community/hooks';
 
 import IcNotifications from './src/assets/ic-notifications.svg';
@@ -33,6 +37,52 @@ const Colors = {
 const sendbird = SendbirdChat.init({
   appId: '5884F3E6-135C-445B-8791-05B5D8DA6BB9',
 });
+
+async function handleFirebaseMessage(
+  message: FirebaseMessagingTypes.RemoteMessage,
+) {
+  try {
+    if (message.data?.sendbird) {
+      const payload = JSON.parse(message.data.sendbird);
+
+      const channelId = await notifee.createChannel({
+        id: 'default',
+        name: 'Default Channel',
+      });
+
+      await notifee.displayNotification({
+        id: message.messageId,
+        title: payload.push_title || payload.channel.name,
+        body: payload.message,
+        data: {sendbird: payload},
+        android: {
+          channelId,
+          pressAction: {id: 'default'},
+        },
+        ios: {
+          foregroundPresentationOptions: {
+            alert: true,
+            badge: true,
+            sound: true,
+          },
+        },
+      });
+    }
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+async function registerPushToken() {
+  if (Platform.OS === 'ios') {
+    const token = await messaging().getAPNSToken();
+    token && (await sendbird.registerAPNSPushTokenForCurrentUser(token));
+  } else {
+    const token = await messaging().getToken();
+    console.log('FCM token', token);
+    await sendbird.registerFCMPushTokenForCurrentUser(token);
+  }
+}
 
 function App(): JSX.Element {
   const [currentUserId, setCurrentUserId] = useState('');
@@ -74,7 +124,7 @@ function App(): JSX.Element {
     );
   }, [isDarkMode, nativeSendbirdUserId, userId]);
 
-  const onRemoteNotification = useEvent((notification: PushNotification) => {
+  const onNotificationIOS = useEvent((notification: PushNotification) => {
     const data = notification.getData();
 
     if (data.sendbird) {
@@ -89,25 +139,69 @@ function App(): JSX.Element {
     notification.finish(result);
   });
 
+  const onNotificationAndroid = useEvent(async (notification: Notification) => {
+    const {data} = notification;
+
+    if (data?.sendbird) {
+      const channelUrl = (data.sendbird as any).channel.channel_url;
+      if (channelUrl === 'notification_143867_feed') {
+        openNotifications();
+      }
+    }
+  });
+
   useEffect(() => {
-    PushNotificationIOS.addEventListener('notification', onRemoteNotification);
+    messaging().setBackgroundMessageHandler(handleFirebaseMessage);
+  }, []);
+
+  useEffect(() => {
+    notifee
+      .getInitialNotification()
+      .then(initialNotification => {
+        if (
+          initialNotification &&
+          initialNotification.pressAction.id === 'default'
+        ) {
+          onNotificationAndroid(initialNotification.notification);
+        }
+      })
+      .catch(console.error);
+
+    const unsubscribe = notifee.onForegroundEvent(event => {
+      if (event.detail.notification && event.type === EventType.PRESS) {
+        onNotificationAndroid(event.detail.notification);
+      }
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, [onNotificationAndroid]);
+
+  useEffect(() => {
+    notifee.onBackgroundEvent(async event => {
+      if (event.detail.notification && event.type === EventType.PRESS) {
+        onNotificationAndroid(event.detail.notification);
+      }
+    });
+  }, [onNotificationAndroid]);
+
+  useEffect(() => {
+    if (Platform.OS === 'ios') {
+      PushNotificationIOS.getInitialNotification().then(
+        notification => notification && onNotificationIOS(notification),
+      );
+    }
+    PushNotificationIOS.addEventListener('notification', onNotificationIOS);
     PushNotificationIOS.addEventListener(
       'localNotification',
-      onRemoteNotification,
+      onNotificationIOS,
     );
-    PushNotificationIOS.addEventListener('register', async token => {
-      await sendbird.registerAPNSPushTokenForCurrentUser(token);
-      console.log('Registered APNS push token:', token);
-    });
-    PushNotificationIOS.addEventListener('registrationError', error => {
-      console.error('Failed to register APNS push token:', error);
-    });
     return () => {
       PushNotificationIOS.removeEventListener('notification');
-      PushNotificationIOS.removeEventListener('register');
-      PushNotificationIOS.removeEventListener('registrationError');
+      PushNotificationIOS.removeEventListener('localNotification');
     };
-  }, [onRemoteNotification]);
+  }, [onNotificationIOS]);
 
   const signIn = async () => {
     const trimmedUserId = userId.trim();
@@ -118,7 +212,8 @@ function App(): JSX.Element {
     try {
       await sendbird.connect(trimmedUserId);
       setCurrentUserId(trimmedUserId);
-      PushNotificationIOS.requestPermissions();
+      await notifee.requestPermission();
+      registerPushToken();
     } catch (error) {
       console.error(error);
     }
@@ -129,6 +224,11 @@ function App(): JSX.Element {
       if (sendbird.apnsPushToken) {
         await sendbird.unregisterAPNSPushTokenForCurrentUser(
           sendbird.apnsPushToken,
+        );
+      }
+      if (sendbird.fcmPushToken) {
+        await sendbird.unregisterFCMPushTokenForCurrentUser(
+          sendbird.fcmPushToken,
         );
       }
       await sendbird.disconnect();

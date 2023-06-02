@@ -1,5 +1,6 @@
 import Foundation
 import UIKit
+import FirebaseCore
 import SendbirdUIKit
 
 @UIApplicationMain
@@ -9,6 +10,8 @@ class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterD
   var bridge: RCTBridge!
 
   func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
+    FirebaseApp.configure()
+
     let APP_ID = "5884F3E6-135C-445B-8791-05B5D8DA6BB9"
 
     SendbirdUI.initialize(applicationId: APP_ID) { // This is the origin.

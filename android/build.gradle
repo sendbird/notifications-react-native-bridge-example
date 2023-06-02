@@ -17,6 +17,7 @@ buildscript {
     dependencies {
         classpath("com.android.tools.build:gradle:7.3.1")
         classpath("com.facebook.react:react-native-gradle-plugin")
+        classpath("com.google.gms:google-services:4.3.15")
     }
 }
 
@@ -24,5 +25,7 @@ allprojects {
     repositories {
         maven { url "https://jitpack.io" }
         maven { url "https://repo.sendbird.com/public/maven" }
+        google()
+        mavenCentral()
     }
 }
